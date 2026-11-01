@@ -105,6 +105,10 @@
 - 若同轮达到胜利线的玩家不止一人，按该轮结束现金最高者获胜；现金仍相同则成功留车轮数较多者胜，仍相同共享胜利。
 - 若赃物牌刚好用完且有人达到胜利线，优先按即时胜利规则判定；无人达线则按牌堆耗尽规则结束。
 
+## 部署到 Vercel
+
+本仓库提供 Vercel 部署入口：静态页面由 `public/` 提供，NestJS API 通过 `api/index.ts` 运行在 Vercel Function，`GET /api/game/rules` 返回规则说明。导入 Git 项目后，Framework Preset 选 Other，Build Command 使用 `npm run vercel-build`，Output Directory 留空，Install Command 使用 `npm install`。重新部署后，在浏览器开发者工具 Network 检查 `/style.css?v=2` 与 `/game.js?v=2` 响应为 200；若 404，检查 Vercel 项目 Root Directory 指向仓库根目录并重新部署。NestJS API 无状态；当前对局由浏览器处理，只支持本地单机，不支持跨设备联机。
+
 ## 可选村规
 
 1. **铁腕退出**：谈判阶段若有人收钱退出，就必须退出，不能收钱后继续留车。本村规只约束明确约定的贿赂。
