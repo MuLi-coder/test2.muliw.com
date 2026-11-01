@@ -1,30 +1,25 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../src/app.module';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import express, { Express } from 'express';
-import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'node:path';
+import { AppModule } from '../src/app.module';
 
-let cached: Express | undefined;
-let initializing: Promise<Express> | undefined;
-
-async function createApp(): Promise<Express> {
+let cached: Promise<Express> | undefined;
+async function createServer(): Promise<Express> {
   const server = express();
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, new ExpressAdapter(server), { logger: false });
-  app.setGlobalPrefix('api');
+  const app = await NestFactory.create(AppModule, new ExpressAdapter(server), { bodyParser: true, logger: ['error', 'warn'] });
+  app.enableCors();
   await app.init();
   return server;
 }
-
-export default async function handler(req: any, res: any) {
-  try {
-    if (!cached) {
-      initializing ??= createApp();
-      cached = await initializing;
-    }
-    cached(req, res);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Application initialization failed' });
+export default async function handler(req: express.Request, res: express.Response) {
+  cached ??= createServer();
+  const server = await cached;
+  // The client bundle is served from public/, while API requests are handled by the Nest app.
+  if (req.path === '/' || req.path === '/index.html' || req.path.startsWith('/style.css') || req.path.startsWith('/app.js')) {
+    const asset = req.path === '/' ? '/index.html' : req.path;
+    return res.sendFile(join(process.cwd(), 'public', asset.slice(1)));
   }
+  return server(req, res);
 }
