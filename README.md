@@ -6,7 +6,7 @@
 
 1. 将本项目推送到 Vercel 已连接的 Git 仓库。Vercel 项目 Framework Preset 选择 **NestJS**，根目录使用项目根目录。根目录 `main.ts` 是 Vercel 的 NestJS 自动检测入口，保留默认 Vercel 路由处理，不额外配置内部 rewrites。
 2. Vercel 自动安装依赖并执行 `npm run build`。网页静态文件位于 `public/`，NestJS 应用由根目录 `main.ts` 引导。
-3. 在 Vercel Project Settings → Environment Variables 设置 `DEEPSEEK_API_KEY`（推荐）、`DEEPSEEK_BASE_URL`（默认 `https://api.deepseek.com`）和 `DEEPSEEK_MODEL`（默认 `deepseek-chat`），再部署。
+3. 在 Vercel Project Settings → Environment Variables 设置 `DEEPSEEK_API_KEY`（推荐）、`DEEPSEEK_BASE_URL`（默认 `https://api.deepseek.com`）和 `DEEPSEEK_MODEL`（默认 `deepseek-chat`），以及可选的 `DEEPSEEK_FAST_MODEL`（覆盖 AI 快速决策使用的模型），再部署。
 
 无需在本地安装依赖即可提交并交由 Vercel 构建。可选本地开发：Node.js 20+ 下 `npm install && npm run dev`，打开 http://localhost:3000。`npm run build` 用于验证 TypeScript 编译。
 
@@ -19,7 +19,7 @@
 - 3–8 人配置、角色集合、初始资金、12 张赃物牌与回合状态。
 - 同时选角、混洗后显示玩家人数减一张身份牌，暗置角色照常参与结算。
 - 全员公聊，不设私聊；玩家在选角或谈判阶段均可随时跳车。
-- AI 单次公开发言最多 30 字；电脑玩家轮流发言，整体间隔至少 5 秒。被点名时会先公开回复“我在，正在思考。”；人类玩家跳车后，电脑将在 10 秒内自动确认发车。全员确认后按角色逐步揭晓，再展示分赃结算。
+- AI 单次公开发言最多 30 字；电脑玩家轮流发言，整体间隔约 1 秒，并会主动相互参与讨论。调用 DeepSeek 时限制输出 token 以减少等待，可用 DEEPSEEK_FAST_MODEL 指定较快模型。被点名时会先公开回复确认收到；人类玩家确认或跳车后，电脑将在 10 秒内自动确认发车。全员确认后按角色逐步揭晓，再展示分赃结算。
 - 语言协议不产生自动效果；电脑会参考可见承诺、对话、人设与当前利益判断交易请求，不再随机一律接受/拒绝。
 - 电脑玩家使用简短代号，并根据人格轮流参与全桌公聊；人类发言在界面先行即时回显。
 - 玩家全部确认后结算撞车、保证金、司机车费、恶棍抢钱、奖励、谋士增赃与胜利判定。
