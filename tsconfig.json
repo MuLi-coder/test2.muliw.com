@@ -11,5 +11,5 @@
     "skipLibCheck": true,
     "moduleResolution": "node"
   },
-  "include": ["src/**/*.ts", "api/**/*.ts"]
+  "include": ["main.ts", "src/**/*.ts"]
 }

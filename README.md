@@ -4,8 +4,8 @@
 
 ## Vercel 部署
 
-1. 将本项目推送到 Vercel 已连接的 Git 仓库。Vercel 项目 Framework Preset 选择 **NestJS**，根目录使用项目根目录。
-2. Vercel 根据 `vercel.json` 执行 `npm run build`，并将 `/api/*` 路由到 NestJS Serverless Function；静态网页文件从 `public/` 提供。
+1. 将本项目推送到 Vercel 已连接的 Git 仓库。Vercel 项目 Framework Preset 选择 **NestJS**，根目录使用项目根目录。根目录 `main.ts` 是 Vercel 的 NestJS 自动检测入口，保留默认 Vercel 路由处理，不额外配置内部 rewrites。
+2. Vercel 自动安装依赖并执行 `npm run build`。网页静态文件位于 `public/`，NestJS 应用由根目录 `main.ts` 引导。
 3. 在 Vercel Project Settings → Environment Variables 设置 `DEEPSEEK_API_KEY`（推荐）、`DEEPSEEK_BASE_URL`（默认 `https://api.deepseek.com`）和 `DEEPSEEK_MODEL`（默认 `deepseek-chat`），再部署。
 
 无需在本地安装依赖即可提交并交由 Vercel 构建。可选本地开发：Node.js 20+ 下 `npm install && npm run dev`，打开 http://localhost:3000。`npm run build` 用于验证 TypeScript 编译。
