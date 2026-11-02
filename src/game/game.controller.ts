@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { GameService, Role } from './game.service';
 import { DeepSeekService } from '../ai/deepseek.service';
 @Controller('api')
