@@ -54,7 +54,7 @@ export class RedisStore {
         const parsed = this.parse(buffer, 0);
         if (!parsed || parsed.next > buffer.length) return;
         cleanup();
-        if (parsed.error) reject(new Error(parsed.value)); else resolve(parsed.value);
+        if (parsed.error) reject(new Error(parsed.value ?? 'Redis 返回错误')); else resolve(parsed.value);
       };
       socket.on('data', onData);
       socket.once('error', onError);
