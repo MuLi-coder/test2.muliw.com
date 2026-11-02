@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import { RedisStore } from './redis.store';
 
 export type Role = '暴徒' | '恶棍' | '司机' | '告密者' | '谋士';
 export type Phase = 'lobby' | 'planning' | 'negotiation' | 'settling' | 'roundResult' | 'finished';
@@ -12,9 +13,13 @@ const shuffle=<T>(a:T[])=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math
 @Injectable()
 export class GameService {
  private games = new Map<string,Game>();
- create(humanName='你', count=4, bots?: string[]): Game { if(count<3||count>8)throw new BadRequestException('人数必须为 3–8 人'); const g:Game={id:randomUUID(),phase:'lobby',round:0,players:[],deck:shuffle([...cards]),talks:[],offers:[],revealed:[],hiddenCount:0,log:[],launchVotes:[],createdAt:Date.now()}; g.players.push(this.player('human',humanName,true)); const personas=['谨慎冷静的老手：优先长期生存，兑现清晰承诺。','贪婪的机会主义者：偏重眼前收益，会权衡承诺成本。','守信的谈判家：重视互惠与信誉，通常履行具体承诺。','多疑的观察者：先收集信息，只接受可信且划算的交易。','胆大的赌徒：愿意冒险，但会拒绝明显不公平交易。','沉默的策士：话少，重视信息优势与稳定盟友。','圆滑的骗子：擅长试探和虚张声势，可能策略性违约。'];for(let i=1;i<count;i++){const bot=this.player(`bot-${i}`,bots?.[i-1]||['老手','机会派','守信派','观察者','赌徒','策士','骗子'][i-1]||`搭档 ${i}`,false);bot.persona=personas[i-1]||personas[0];g.players.push(bot);} this.games.set(g.id,g); return this.view(g,g.players[0].id); }
+ constructor(private readonly redis: RedisStore) {}
+ private redisKey(id:string){return `million-heist:game:${id}`;}
+ private async persist(g:Game){this.games.set(g.id,g);if(process.env.REDIS_URL)await this.redis.set(this.redisKey(g.id),JSON.stringify(g));}
+ async ensure(id:string):Promise<Game>{if(!process.env.REDIS_URL){const cached=this.games.get(id);if(cached)return cached;throw new NotFoundException('游戏不存在；请在部署环境配置 REDIS_URL');}const raw=await this.redis.get(this.redisKey(id));if(!raw)throw new NotFoundException('游戏不存在或 Redis 中已过期');const g=JSON.parse(raw) as Game;(g as any).availableRoles=(g as any).availableRoles||roles;this.games.set(id,g);return g;} async save(id:string){const g=this.games.get(id);if(g)await this.persist(g);}
+ async create(humanName='你', count=4, bots?: string[]): Promise<Game> { if(count<3||count>8)throw new BadRequestException('人数必须为 3–8 人'); const g:Game={id:randomUUID(),phase:'lobby',round:0,players:[],deck:shuffle([...cards]),talks:[],offers:[],revealed:[],hiddenCount:0,log:[],launchVotes:[],createdAt:Date.now()}; g.players.push(this.player('human',humanName,true)); const personas=['谨慎冷静的老手：优先长期生存，兑现清晰承诺。','贪婪的机会主义者：偏重眼前收益，会权衡承诺成本。','守信的谈判家：重视互惠与信誉，通常履行具体承诺。','多疑的观察者：先收集信息，只接受可信且划算的交易。','胆大的赌徒：愿意冒险，但会拒绝明显不公平交易。','沉默的策士：话少，重视信息优势与稳定盟友。','圆滑的骗子：擅长试探和虚张声势，可能策略性违约。'];for(let i=1;i<count;i++){const bot=this.player(`bot-${i}`,bots?.[i-1]||['老手','机会派','守信派','观察者','赌徒','策士','骗子'][i-1]||`搭档 ${i}`,false);bot.persona=personas[i-1]||personas[0];g.players.push(bot);} await this.persist(g); return this.view(g,g.players[0].id); }
  private player(id:string,name:string,isHuman:boolean):Player{return{id,name,isHuman,cash:0,active:true,escaped:false,roundsSurvived:0,trust:{}};}
- get(id:string){const g=this.games.get(id);if(!g)throw new NotFoundException('游戏不存在');return g;}
+ get(id:string){const g=this.games.get(id);if(!g)throw new NotFoundException('游戏未载入');return g;}
  publicView(id:string,pid?:string){const g=this.get(id);return this.view(g,pid);}
  start(id:string){const g=this.get(id);if(g.phase!=='lobby')throw new BadRequestException('游戏已开始');const n=g.players.length;const roleSet:Role[]=n<=4?['暴徒','恶棍','司机']:n<=6?['暴徒','恶棍','司机','告密者']:roles;g.players.forEach(p=>p.cash=n<=4?800:n<=6?1000:1200);g.deck=shuffle([...cards]);g.round=0;g.phase='planning';g.log.push('游戏开始：每人拥有 '+(n<=4?800:n<=6?1000:1200)+' 万。');this.nextRound(g,roleSet);return g;}
  private assignBotRoles(g:Game){const available=[...((g as any).availableRoles as Role[])];for(const p of g.players.filter(x=>!x.isHuman&&x.active&&!x.escaped&&!x.role)){if(!available.length)break;const role=available[Math.floor(Math.random()*available.length)];p.role=role;const deposit=g.players.length<=4?100:g.card!.deposit;if(p.cash<deposit){p.active=false;p.escaped=true;continue;}p.cash-=deposit;}if(g.players.filter(x=>x.active&&!x.escaped).every(x=>x.role))this.revealAndBegin(g);}
